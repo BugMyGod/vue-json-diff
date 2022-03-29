@@ -16,6 +16,7 @@ import { parse } from './vendor/json-diff/json-source-map.js'
 
 export const JsonDiff = (function () {
   function JsonInputView(el, initialText) {
+    //   console.log('JsonDiff--el--', el, initialText)
       this.el = el;
       let codemirror = this.codemirror = CodeMirror.fromTextArea(this.el, {
           lineNumbers: true,
@@ -51,11 +52,10 @@ export const JsonDiff = (function () {
               self.trigger('change');
           }
           oldValue = text;
-        
       }
 
       function autoFormat() {
-        // console.log('autoFormat begin')
+        console.log('JsonDiff--autoFormat begin')
           let totalLines = codemirror.lineCount();
           codemirror.autoFormatRange({
               line: 0,
@@ -67,7 +67,7 @@ export const JsonDiff = (function () {
               line: 0,
               ch: 0
           });
-        //   console.log('autoFormat end')
+          console.log('JsonDiff--autoFormat end')
       }
   }
 
@@ -123,9 +123,11 @@ export const JsonDiff = (function () {
       }
   }
 
-  function onInputChange() {
-      
-      compareJson();
+
+  function onInputChange(text) {
+    let inputText = this.getText()
+    compareJson(inputText);
+    resultFunc(inputText)
   }
 
   let leftInputView = null;
@@ -133,7 +135,7 @@ export const JsonDiff = (function () {
   let errHandler = null;
   let diffHandler = null;
 
-  function compareJson() {
+  function compareJson(inputText) {
       leftInputView.clearMarkers();
       rightInputView.clearMarkers();
       let leftText = leftInputView.getText(),
@@ -155,22 +157,18 @@ export const JsonDiff = (function () {
       } catch (e) {
           console.log('right ==>', e);
       }
-
       if (!leftJson || !rightJson) {
           if (!leftJson && !rightJson) {
               errHandler && errHandler('left-right', false);
           } else if (!leftJson) {
               errHandler && errHandler('left', false);
-
           } else {
               errHandler && errHandler('right', false);
           }
-
           return;
       }
       let diffs = jsonpatch.compare(leftJson, rightJson);
-      diffHandler && diffHandler(diffs);
-
+      diffHandler && diffHandler(diffs, inputText);
       diffs.forEach(function (diff) {
           try {
               if (diff.op === 'remove') {
@@ -189,6 +187,7 @@ export const JsonDiff = (function () {
 
 
   function init(left, right, errorHandler, dfHandler) {
+    //   console.log('JsonDiff--left, right---', left, right)
 
       errHandler = errorHandler;
       diffHandler = dfHandler;
@@ -209,8 +208,13 @@ export const JsonDiff = (function () {
       });
   }
 
+  function resultFunc(result) {
+    return result
+  }
+
   return {
       init: init,
-      compareJson: compareJson
+      compareJson: compareJson,
+      resultFunc: resultFunc
   }
 })();

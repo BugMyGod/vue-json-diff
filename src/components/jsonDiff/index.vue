@@ -11,15 +11,14 @@
       <div class="col-md-6 box-wrapper-left">
         <textarea
           class="form-control mod-textarea jsonSourceLeft"
-          id=""
-          ref="srcLeft"
+          :id="refLeft"
           placeholder="在这里粘贴JSON代码"
         >{{ leftData }}</textarea>
       </div>
       <div class="col-md-6 box-wrapper-right">
         <textarea
           class="form-control mod-textarea jsonSourceRight"
-          ref="srcRight"
+          :id="refRight"
           placeholder="在这里粘贴JSON代码"
         >{{ rightData }}</textarea>
       </div>
@@ -40,8 +39,9 @@ export default {
       default: true
     },
     errorHandler: Function,
-    diffHandler: Function
-
+    diffHandler: Function,
+    refLeft: String,
+    refRight: String
   },
   watch: {
     jsonSourceLeft: {
@@ -53,8 +53,7 @@ export default {
       immediate: true
     },
     jsonSourceRight: {
-      handler(nVal, oVal) 
-      {
+      handler(nVal, oVal) {
         //使用四个空格缩进
         this.rightData = JSON.stringify(nVal, null, 4);
       },
@@ -67,13 +66,45 @@ export default {
       errorMessage: "",
       errorHighlight: false,
       leftData: "",
-      rightData: ""
+      rightData: "",
+      which: '',
+      result: {}
     };
   },
-  mounted: function() {
-    // 错误处理器
-    let errorHandler = (which, ok) => {
-      // debugger
+  mounted() {    
+    this.initEvent()
+  },
+  methods: {
+    diffChange(diffs, inputText, which) {
+      let param ={
+        inputText: inputText,
+        which: which,
+        diffs: diffs
+      }
+      console.log('diffChange---', param)
+      this.$emit('diffChange', param)
+    },
+    /* diff处理器 */
+    myDiffHandler(diffs, inputText) {
+      this.result ={
+        inputText: inputText,
+        which: this.which,
+        diffs: diffs
+      }
+      this.diffs = diffs
+      console.log('diffs--', diffs)
+      this.diffChange(diffs, inputText, this.which)
+      if (!this.errorHighlight) {
+        if (diffs.length) {
+          this.errorMessage += "共有 " + diffs.length + " 处不一致！";
+        } else {
+          this.errorMessage += "左右两侧JSON内容一致！";
+        }
+      }
+      this.$emit('myDiffHandler', this.result)
+    },
+    /* 错误处理器 */
+    myErrorHandler(which, ok) {
       if (ok) {
         this.errorMessage = "两侧JSON比对完成！";
         this.errorHighlight = false;
@@ -83,29 +114,24 @@ export default {
           "侧JSON不合法！";
         this.errorHighlight = true;
       }
-    };
-
-    // diff处理器
-    let diffHandler = diffs => {
-        console.log(diffs)
-      if (!this.errorHighlight) {
-        if (diffs.length) {
-          this.errorMessage += "共有 " + diffs.length + " 处不一致！";
-        } else {
-          this.errorMessage += "左右两侧JSON内容一致！";
-        }
-      }
-    };
-    
-    
-    // 代码比对
-    JsonDiff.init(
-      this.$refs.srcLeft,
-      this.$refs.srcRight,
-      errorHandler,
-      diffHandler
-    );
-    JsonDiff.compareJson()
+      this.which = which
+      this.$emit('myErrorHandler', which, ok)
+    },
+    /* 代码比对 */
+    initEvent(data, type) {
+      // console.log('initEvent---id--', document.getElementById(this.refLeft), document.getElementById(this.refRight))
+      JsonDiff.init(
+        document.getElementById(this.refLeft),
+        document.getElementById(this.refRight),
+        this.myErrorHandler,
+        this.myDiffHandler
+      )
+      this.myCompareJson()
+      this.$emit('initEvent', data, type)
+    },
+    myCompareJson() {
+      JsonDiff.compareJson()
+    }
   }
 };
 </script>
